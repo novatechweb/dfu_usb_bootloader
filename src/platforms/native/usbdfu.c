@@ -29,6 +29,8 @@ uint32_t app_address = 0x08002000;
 
 void dfu_detach(void)
 {
+	dfu_jump_app_if_valid();
+
         /* USB device must detach, we just reset... */
 	scb_reset_system();
 }
@@ -37,8 +39,6 @@ int main(void)
 {
 	/* Check the force bootloader pin*/
 	rcc_periph_clock_enable(RCC_GPIOB);
-	if(gpio_get(GPIOB, GPIO12))
-		dfu_jump_app_if_valid();
 
 	dfu_protect(DFU_MODE);
 
