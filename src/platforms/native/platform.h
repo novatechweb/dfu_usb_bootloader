@@ -33,10 +33,10 @@
 #define INLINE_GPIO
 #define CDCACM_PACKET_SIZE 	64
 #define PLATFORM_HAS_TRACESWO
-#define BOARD_IDENT             "Black Magic Probe"
-#define BOARD_IDENT_DFU		"Black Magic Probe (Upgrade)"
-#define BOARD_IDENT_UPD		"Black Magic Probe (DFU Upgrade)"
-#define DFU_IDENT               "Black Magic Firmware Upgrade"
+#define BOARD_IDENT             "USB to 4x Serial"
+#define BOARD_IDENT_DFU		"USB to 4x Serial (Upgrade)"
+#define BOARD_IDENT_UPD		"USB to 4x Serial (DFU Upgrade)"
+#define DFU_IDENT               "USB to 4x Serial Firmware Upgrade"
 #define DFU_IFACE_STRING	"@Internal Flash   /0x08000000/8*001Ka,120*001Kg"
 #define UPD_IFACE_STRING	"@Internal Flash   /0x08000000/8*001Kg"
 
