@@ -27,6 +27,8 @@
 
 #define FLASH_OBP_RDP_KEY 0x5aa5
 
+#define STM32_CAN 1
+
 #if defined (STM32_CAN)
 #	define FLASHBLOCKSIZE 2048
 #else
@@ -53,10 +55,16 @@ void dfu_flash_program_buffer(uint32_t baseaddr, void *buf, int len)
 
 uint32_t dfu_poll_timeout(uint8_t cmd, uint32_t addr, uint16_t blocknum)
 {
-	(void)cmd;
-	(void)addr;
-	(void)blocknum;
-	return 100;
+	addr &= (~(FLASHBLOCKSIZE - 1));
+	if (cmd == CMD_ERASE && blocknum == 0 && addr == last_erased_page) {
+		return 1;
+	}
+	else if (cmd == CMD_SETADDR && blocknum == 0) {
+		return 1;
+	}
+
+	/* Tell the host to wait for 40ms for writes and erases */
+	return 40;
 }
 
 void dfu_protect(dfu_mode_t mode)
