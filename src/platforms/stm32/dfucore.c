@@ -231,9 +231,18 @@ static int usbdfu_control_request(usbd_device *dev,
 		/* Abort returns to dfuIDLE state */
 		usbdfu_state = STATE_DFU_IDLE;
 		return 1;
-	case DFU_UPLOAD:
-		/* Upload not supported for now */
-		return 0;
+	case DFU_UPLOAD: {
+		/* Upload */
+		uint8_t * dataaddr;
+		prog.blocknum = req->wValue;
+		prog.len = *len;
+		dataaddr =
+			(uint8_t *)prog.addr +
+			((prog.blocknum - 2) * dfu_function.wTransferSize);
+		memcpy(*buf, dataaddr, *len);
+		*complete = NULL;
+		return 1;
+		}
 	case DFU_GETSTATUS: {
 		uint32_t bwPollTimeout = 0; /* 24-bit integer in DFU class spec */
 
