@@ -25,6 +25,7 @@
 
 #include "usbdfu.h"
 
+__attribute__((__section__(".serialno"))) const char board_serial_no[16] = "SERIAL NUM HERE";
 uint32_t app_address = 0x08002000;
 
 void dfu_detach(void)
@@ -37,7 +38,10 @@ void dfu_detach(void)
 
 int main(void)
 {
-	/* Check the force bootloader pin*/
+	/* ensure serialno is linked in */
+	char c = board_serial_no[0];
+	c = c;
+
 	rcc_periph_clock_enable(RCC_GPIOB);
 
 	dfu_protect(DFU_MODE);
@@ -50,11 +54,6 @@ int main(void)
 	rcc_periph_clock_enable(RCC_USB);
 	gpio_set_mode(GPIOA, GPIO_MODE_INPUT, 0, GPIO8);
 
-	systick_interrupt_enable();
-	systick_counter_enable();
-
-	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ,
-			GPIO_CNF_OUTPUT_PUSHPULL, GPIO11);
 	gpio_set_mode(GPIOB, GPIO_MODE_INPUT,
 			GPIO_CNF_INPUT_FLOAT, GPIO2 | GPIO10);
 
@@ -65,10 +64,5 @@ int main(void)
 			GPIO_CNF_OUTPUT_PUSHPULL, GPIO8);
 
 	dfu_main();
-}
-
-void sys_tick_handler(void)
-{
-	gpio_toggle(GPIOB, GPIO11); /* LED2 on/off */
 }
 

@@ -27,3 +27,12 @@ MEMORY
 /* Include the common ld script from libopenstm32. */
 INCLUDE libopencm3_stm32f1.ld
 
+SECTIONS
+{
+	.serialno : AT ( 0x08001FF0 )
+	{
+		. = ALIGN(4);
+			*(.serialno)
+		. = ALIGN(4);
+	} > rom
+}

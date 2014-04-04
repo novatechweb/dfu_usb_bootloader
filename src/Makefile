@@ -7,23 +7,16 @@ BUILDDATE := `date +"%Y%m%d"`
 CFLAGS += -Wall -Wextra -Wno-pointer-sign -Wno-char-subscripts\
 	-Wno-sign-compare \
 	-O0 -std=gnu99 -g3 -DBUILDDATE=\"$(BUILDDATE)\"\
-	-I. -Iinclude -I$(PLATFORM_DIR) \
-	-DVERSION_SUFFIX=\"`../scripts/setlocalversion`\" -MD
+	-I. -Iinclude -I$(PLATFORM_DIR) -MD
 
 include $(PLATFORM_DIR)/Makefile.inc
 
 OBJ = $(SRC:.c=.o)
 
-blackmagic: $(OBJ)
-	$(CC) -o $@ $^ $(LDFLAGS)
-
-gdb: blackmagic
+gdb: stm32f1_dfu
 	cgdb -d arm-cortexm3-eabi-gdb $^
 
-gdb-dfu: blackmagic_dfu blackmagic
-	cgdb -d arm-cortexm3-eabi-gdb $^
-
-.PHONY:	gdb gdb-boot clean host_clean
+.PHONY:	gdb clean host_clean
 
 clean:	host_clean
 	-@$(RM) *.o *.d *~ $(HOSTFILES)
