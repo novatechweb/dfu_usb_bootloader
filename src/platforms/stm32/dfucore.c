@@ -114,7 +114,7 @@ const struct usb_config_descriptor config = {
 static char serial_no[9];
 
 static const char *usb_strings[] = {
-	"Black Sphere Technologies",
+	"NovaTech LLC",
 	BOARD_IDENT_DFU,
 	serial_no,
 	/* This string is used by ST Microelectronics' DfuSe utility */
@@ -122,7 +122,7 @@ static const char *usb_strings[] = {
 };
 
 static const char *usb_strings_upd[] = {
-	"Black Sphere Technologies",
+	"NovaTech LLC",
 	BOARD_IDENT_UPD,
 	serial_no,
 	/* This string is used by ST Microelectronics' DfuSe utility */
