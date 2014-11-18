@@ -29,10 +29,9 @@ INCLUDE libopencm3_stm32f1.ld
 
 SECTIONS
 {
-	.serialno : AT ( 0x08001FF0 )
+	.board_serial_num 0x08001FF0 :
 	{
-		. = ALIGN(4);
-			*(.serialno)
-		. = ALIGN(4);
-	} > rom
+		*(.serialno);
+		. = 0x10;
+	}
 }

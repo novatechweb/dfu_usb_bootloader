@@ -15,4 +15,3 @@ libopencm3:
 	@git submodule init
 	@git submodule update
 	@$(MAKE) PREFIX=$(PREFIX) -C libopencm3 lib
-

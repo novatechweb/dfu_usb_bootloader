@@ -32,6 +32,26 @@
 
 #include "usbdfu.h"
 
+#define NOVATECH_VENDOR_ID  0x2AEB
+#define USB_PRODUCT_ID 0
+#define USB_BCD_VERSION_NUM ((VERSION_MAJOR << 8) | VERSION_MINOR)
+#define SERIALNO_FLASH_LOCATION	0x08001ff0
+
+#if defined(STM32F4) || defined(STM32F2)
+#define UNIQUE_SERIAL_R 0x1FFF7A10
+#define FLASH_SIZE_R    0x1fff7A22
+#elif defined(STM32F3)
+#define UNIQUE_SERIAL_R 0x1FFFF7AC
+#define FLASH_SIZE_R    0x1fff77cc
+#elif defined(STM32L1)
+#define UNIQUE_SERIAL_R 0x1ff80050
+#define FLASH_SIZE_R    0x1FF8004C
+#else
+#define UNIQUE_SERIAL_R 0x1FFFF7E8;
+#define FLASH_SIZE_R    0x1ffff7e0
+#endif
+
+
 usbd_device *usbdev;
 /* We need a special large control buffer for this device: */
 uint8_t usbd_control_buffer[1024];
@@ -39,8 +59,6 @@ uint8_t usbd_control_buffer[1024];
 static uint32_t max_address;
 
 static enum dfu_state usbdfu_state = STATE_DFU_IDLE;
-
-static char *get_dev_unique_id(char *serial_no);
 
 static struct {
 	uint8_t buf[sizeof(usbd_control_buffer)];
@@ -57,9 +75,9 @@ const struct usb_device_descriptor dev = {
         .bDeviceSubClass = 0,
         .bDeviceProtocol = 0,
         .bMaxPacketSize0 = 64,
-        .idVendor = 0x1D50,
-        .idProduct = 0x6017,
-        .bcdDevice = 0x0100,
+        .idVendor = NOVATECH_VENDOR_ID,
+        .idProduct = USB_PRODUCT_ID,
+        .bcdDevice = USB_BCD_VERSION_NUM,
         .iManufacturer = 1,
         .iProduct = 2,
         .iSerialNumber = 3,
@@ -111,20 +129,18 @@ const struct usb_config_descriptor config = {
 	.interface = ifaces,
 };
 
-static char serial_no[9];
-
 static const char *usb_strings[] = {
 	"NovaTech LLC",
 	BOARD_IDENT_DFU,
-	serial_no,
+	(char *)SERIALNO_FLASH_LOCATION,
 	/* This string is used by ST Microelectronics' DfuSe utility */
 	DFU_IFACE_STRING,
 };
 
-static const char *usb_strings_upd[] = {
+static const char *usb_strings_update_dfu[] = {
 	"NovaTech LLC",
 	BOARD_IDENT_UPD,
-	serial_no,
+	(char *)SERIALNO_FLASH_LOCATION,
 	/* This string is used by ST Microelectronics' DfuSe utility */
 	UPD_IFACE_STRING,
 };
@@ -270,10 +286,21 @@ static int usbdfu_control_request(usbd_device *dev,
 
 void dfu_init(const usbd_driver *driver, dfu_mode_t mode)
 {
-	get_dev_unique_id(serial_no);
+	char **usb_str;
+	int num_strings;
+
+	max_address = (*(uint32_t *) FLASH_SIZE_R) <<10;
+
+	if (mode == DFU_MODE) {
+		usb_str = usb_strings;
+		num_strings = sizeof(usb_strings)/sizeof(char *);
+	} else {
+		usb_str = usb_strings_update_dfu;
+		num_strings = sizeof(usb_strings_update_dfu)/sizeof(char *);
+	}
 
 	usbdev = usbd_init(driver, &dev, &config,
-			   (mode == DFU_MODE)?usb_strings:usb_strings_upd, 4,
+			   usb_str, num_strings,
 			   usbd_control_buffer, sizeof(usbd_control_buffer));
 
 	usbd_register_control_callback(usbdev,
@@ -286,40 +313,4 @@ void dfu_main(void)
 {
 	while (1)
 		usbd_poll(usbdev);
-}
-
-static char *get_dev_unique_id(char *s)
-{
-#if defined(STM32F4) || defined(STM32F2)
-#define UNIQUE_SERIAL_R 0x1FFF7A10
-#define FLASH_SIZE_R    0x1fff7A22
-#elif defined(STM32F3)
-#define UNIQUE_SERIAL_R 0x1FFFF7AC
-#define FLASH_SIZE_R    0x1fff77cc
-#elif defined(STM32L1)
-#define UNIQUE_SERIAL_R 0x1ff80050
-#define FLASH_SIZE_R    0x1FF8004C
-#else
-#define UNIQUE_SERIAL_R 0x1FFFF7E8;
-#define FLASH_SIZE_R    0x1ffff7e0
-#endif
-        volatile uint32_t *unique_id_p = (volatile uint32_t *)UNIQUE_SERIAL_R;
-	uint32_t unique_id = *unique_id_p +
-			*(unique_id_p + 1) +
-			*(unique_id_p + 2);
-        int i;
-
-        /* Calculated the upper flash limit from the exported data
-           in theparameter block*/
-        max_address = (*(uint32_t *) FLASH_SIZE_R) <<10;
-        /* Fetch serial number from chip's unique ID */
-        for(i = 0; i < 8; i++) {
-                s[7-i] = ((unique_id >> (4*i)) & 0xF) + '0';
-        }
-        for(i = 0; i < 8; i++)
-                if(s[i] > '9')
-                        s[i] += 'A' - '9' - 1;
-	s[8] = 0;
-
-	return s;
 }

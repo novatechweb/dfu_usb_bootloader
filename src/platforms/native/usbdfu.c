@@ -26,7 +26,7 @@
 
 #include "usbdfu.h"
 
-__attribute__((__section__(".serialno"))) const volatile char board_serial_no[16] = "SERIAL NUM HERE";
+const volatile char __attribute__((__section__(".serialno"))) board_serial_no[16] = "SERIAL NUM HERE";
 uint32_t app_address = 0x08002000;
 
 struct platform_output_pins_t {
@@ -123,9 +123,11 @@ void dfu_detach(void)
 int main(void)
 {
 	uint8_t i;
+	uint8_t serial_board = false;
 	
 	/* ensure serialno is linked in */
-	if( board_serial_no[0] ) {
+	if ((board_serial_no[0] == '1') && (board_serial_no[1] == '2') && (board_serial_no[2] == '4')) {
+		serial_board = true;
 	}
 	
 	dfu_protect(DFU_MODE);
@@ -134,15 +136,20 @@ int main(void)
 	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
 	systick_set_reload(900000);
 	
-	// Enable clocks for (GPIOA, GPIOB, GPIOC, GPIOD, USART1, AFIO)
+	// Enable clocks for (GPIOA, GPIOB, GPIOC, GPIOD)
 	rcc_peripheral_enable_clock(&RCC_APB2ENR,
 	    RCC_APB2ENR_IOPAEN | RCC_APB2ENR_IOPBEN |
-	    RCC_APB2ENR_IOPCEN | RCC_APB2ENR_IOPDEN |
-	    RCC_APB2ENR_USART1EN | RCC_APB2ENR_AFIOEN);
-	// Enable clocks all four uarts (USART2, USART3, UART4)
-	rcc_peripheral_enable_clock(&RCC_APB1ENR,
-		RCC_APB1ENR_USART2EN | RCC_APB1ENR_USART3EN |
-		RCC_APB1ENR_UART4EN);
+	    RCC_APB2ENR_IOPCEN | RCC_APB2ENR_IOPDEN);
+	if (serial_board) {
+		// *** Special pin setup for UARTS and UART LEDs ***
+		// Enable clocks for (USART1, AFIO)
+		rcc_peripheral_enable_clock(&RCC_APB2ENR,
+		    RCC_APB2ENR_USART1EN | RCC_APB2ENR_AFIOEN);
+		// Enable clocks all four uarts (USART2, USART3, UART4)
+		rcc_peripheral_enable_clock(&RCC_APB1ENR,
+			RCC_APB1ENR_USART2EN | RCC_APB1ENR_USART3EN |
+			RCC_APB1ENR_UART4EN);
+	}
 
 	// Set all port pins to input pull-down
 	gpio_set_mode(GPIOA, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, GPIO_ALL);
@@ -174,14 +181,17 @@ int main(void)
 	gpio_set_mode(GPIOB, GPIO_MODE_INPUT,
 			GPIO_CNF_INPUT_FLOAT, GPIO2 | GPIO10);
 
-	//UART Setup
-	for(i=0; i<4; i++) {
-		gpio_set_mode(uarts[i].tx.port, GPIO_MODE_OUTPUT_50_MHZ, uarts[i].tx.cnf, uarts[i].tx.pin);
-		gpio_set_mode(uarts[i].rts.port, GPIO_MODE_OUTPUT_50_MHZ, uarts[i].rts.cnf, uarts[i].rts.pin);
-		gpio_set_mode(uarts[i].dtr.port, GPIO_MODE_OUTPUT_50_MHZ, uarts[i].dtr.cnf, uarts[i].dtr.pin);
-		usart_set_baudrate(uarts[i].usart, 9600);
-		usart_set_mode(uarts[i].usart, USART_MODE_TX_RX);
-		usart_enable(uarts[i].usart);
+	if (serial_board) {
+		// *** Special pin setup for UARTS and UART LEDs ***
+		//UART Setup
+		for(i=0; i<4; i++) {
+			gpio_set_mode(uarts[i].tx.port, GPIO_MODE_OUTPUT_50_MHZ, uarts[i].tx.cnf, uarts[i].tx.pin);
+			gpio_set_mode(uarts[i].rts.port, GPIO_MODE_OUTPUT_50_MHZ, uarts[i].rts.cnf, uarts[i].rts.pin);
+			gpio_set_mode(uarts[i].dtr.port, GPIO_MODE_OUTPUT_50_MHZ, uarts[i].dtr.cnf, uarts[i].dtr.pin);
+			usart_set_baudrate(uarts[i].usart, 9600);
+			usart_set_mode(uarts[i].usart, USART_MODE_TX_RX);
+			usart_enable(uarts[i].usart);
+		}
 	}
 
 	dfu_init(&stm32f103_usb_driver, DFU_MODE);

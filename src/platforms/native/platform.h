@@ -31,14 +31,12 @@
 #include <alloca.h>
 
 #define INLINE_GPIO
-#define CDCACM_PACKET_SIZE 	64
-#define PLATFORM_HAS_TRACESWO
-#define BOARD_IDENT             "USB to 4x Serial"
-#define BOARD_IDENT_DFU		"USB to 4x Serial (Upgrade)"
-#define BOARD_IDENT_UPD		"USB to 4x Serial (DFU Upgrade)"
-#define DFU_IDENT               "USB to 4x Serial Firmware Upgrade"
-#define DFU_IFACE_STRING	"@Internal Flash   /0x08000000/8*001Ka,120*001Kg"
-#define UPD_IFACE_STRING	"@Internal Flash   /0x08000000/8*001Kg"
+#define CDCACM_PACKET_SIZE 64
+#define BOARD_IDENT       "USB Device Firmware Upgrade"
+#define BOARD_IDENT_DFU   BOARD_IDENT" (Upgrade Firmware) ["BUILDDATE"]"
+#define BOARD_IDENT_UPD   BOARD_IDENT" (Upgrade DFU Firmware) ["BUILDDATE"]"
+#define DFU_IFACE_STRING  "@Internal Flash   /0x08000000/8*001Ka,120*001Kg"
+#define UPD_IFACE_STRING  "@Internal Flash   /0x08000000/8*001Kg"
 
 extern usbd_device *usbdev;
 #define CDCACM_GDB_ENDPOINT	1
