@@ -33,8 +33,8 @@
 #define INLINE_GPIO
 #define CDCACM_PACKET_SIZE 64
 #define BOARD_IDENT       "USB Device Firmware Upgrade"
-#define BOARD_IDENT_DFU   BOARD_IDENT" (Upgrade Firmware) ["BUILDDATE"]"
-#define BOARD_IDENT_UPD   BOARD_IDENT" (Upgrade DFU Firmware) ["BUILDDATE"]"
+#define BOARD_IDENT_DFU   BOARD_IDENT" (Upgrade Firmware)"
+#define BOARD_IDENT_UPD   BOARD_IDENT" (Upgrade DFU Firmware)"
 #define DFU_IFACE_STRING  "@Internal Flash   /0x08000000/8*001Ka,120*001Kg"
 #define UPD_IFACE_STRING  "@Internal Flash   /0x08000000/8*001Kg"
 

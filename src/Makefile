@@ -2,13 +2,12 @@ PROBE_HOST ?= native
 PLATFORM_DIR = platforms/$(PROBE_HOST)
 VPATH += $(PLATFORM_DIR)
 
-BUILDDATE := `date +"%Y%m%d"`
 VERSION_MAJOR := 0x01
 VERSION_MINOR := 0x01
 
 CFLAGS += -Wall -Wextra -Wno-pointer-sign -Wno-char-subscripts\
 	-Wno-sign-compare \
-	-Os -std=gnu99 -g3 -DBUILDDATE=\"$(BUILDDATE)\"\
+	-Os -std=gnu99 -g3 \
 	-DVERSION_MAJOR=$(VERSION_MAJOR) \
 	-DVERSION_MINOR=$(VERSION_MINOR) \
 	-I. -Iinclude -I$(PLATFORM_DIR) -MD
