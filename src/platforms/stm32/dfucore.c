@@ -286,7 +286,7 @@ static int usbdfu_control_request(usbd_device *dev,
 
 void dfu_init(const usbd_driver *driver, dfu_mode_t mode)
 {
-	char **usb_str;
+	const char **usb_str;
 	int num_strings;
 
 	max_address = (*(uint32_t *) FLASH_SIZE_R) <<10;
