@@ -10,6 +10,34 @@
 
 #include "i2c_tools.h"
 
+void restart_systick_count(void) {
+	/* verify counter is stopped */
+	systick_counter_disable();
+	/* 9000000/(89999 + 1) = 100 overflows per second
+	   - every 10ms one overflow and reset.
+	   SysTick interrupt every N clock pulses: set reload to N-1
+	 **/
+	systick_set_reload(89999);
+	/* Start the SysTick counter */
+	systick_counter_enable();
+}
+
+void stop_systick(void) {
+	systick_counter_disable();
+	systick_interrupt_disable();
+	systick_set_reload(0);
+}
+
+void init_systick(void) {
+	// make certain SysTick is disabled
+	stop_systick();
+	// setup SysTick
+	/* 72MHz / 8 => 9000000 counts per second */
+	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
+	/* restart SysTick counter */
+	restart_systick_count();
+}
+
 void reset_i2c_pins(uint32_t I2Cx) {
 	// reseting I2C pins [errata_sheet CD00197763.pdf section 2.13.7]
 	const uint16_t gpios[] = {
@@ -21,9 +49,13 @@ void reset_i2c_pins(uint32_t I2Cx) {
 	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_OPENDRAIN, gpios[0]);
 	for(uint8_t index_num=0; index_num<3; index_num++) {
 		gpio_set(GPIOB, gpios[index_num]);
-		while (!timeout && !gpio_get(GPIOB, gpios[index_num]));
+		restart_systick_count();
+		while (!systick_get_countflag() &&
+			!gpio_get(GPIOB, gpios[index_num]));
 		gpio_clear(GPIOB, gpios[index_num]);
-		while (!timeout && gpio_get(GPIOB, gpios[index_num]));
+		restart_systick_count();
+		while (!systick_get_countflag() &&
+			gpio_get(GPIOB, gpios[index_num]));
 	}
 	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_OPENDRAIN, gpios[0]);
 	I2C_CR1(I2Cx) |= I2C_CR1_SWRST;
@@ -138,20 +170,26 @@ ErrorStatus I2C_CheckEvent(uint32_t I2Cx, uint32_t I2C_EVENT) {
 
 void i2c_start(uint32_t I2Cx) {
 	// Wait until I2Cx is not busy anymore
-	while (I2C_GetFlagStatus(I2Cx, I2C_FLAG_BUSY));
+	restart_systick_count();
+	while (!systick_get_countflag() &&
+		I2C_GetFlagStatus(I2Cx, I2C_FLAG_BUSY));
 	// Generate start condition
 	i2c_send_start(I2Cx);
 	// Wait for I2C EV5. 
 	// It means that the start condition has been correctly released 
 	// on the I2C bus (the bus is free, no other devices is communicating))
-	while (!I2C_CheckEvent(I2Cx, I2C_EVENT_MASTER_MODE_SELECT));
+	restart_systick_count();
+	while (!systick_get_countflag() &&
+		!I2C_CheckEvent(I2Cx, I2C_EVENT_MASTER_MODE_SELECT));
 }
 
 void i2c_stop(uint32_t I2Cx) {
 	// Generate I2C stop condition
 	i2c_send_stop(I2Cx);
 	// Wait until I2C stop condition is finished
-	while (I2C_GetFlagStatus(I2Cx, I2C_FLAG_STOPF));
+	restart_systick_count();
+	while (!systick_get_countflag() &&
+		I2C_GetFlagStatus(I2Cx, I2C_FLAG_STOPF));
 }
 
 void i2c_address_direction(uint32_t I2Cx, uint8_t address, uint8_t direction) {
@@ -160,9 +198,13 @@ void i2c_address_direction(uint32_t I2Cx, uint8_t address, uint8_t direction) {
 	// Wait for I2C EV6
 	// It means that a slave acknowledges his address
 	if (direction == I2C_WRITE) {
-		while (!I2C_CheckEvent(I2Cx, I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED));
+		restart_systick_count();
+		while (!systick_get_countflag() &&
+			!I2C_CheckEvent(I2Cx, I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED));
 	} else if (direction == I2C_READ) {
-		while (!I2C_CheckEvent(I2Cx, I2C_EVENT_MASTER_RECEIVER_MODE_SELECTED));
+		restart_systick_count();
+		while (!systick_get_countflag() &&
+			!I2C_CheckEvent(I2Cx, I2C_EVENT_MASTER_RECEIVER_MODE_SELECTED));
 	}
 }
 
@@ -172,7 +214,9 @@ void i2c_transmit(uint32_t I2Cx, uint8_t byte) {
 	// Wait for I2C EV8_2
 	// It means the data has been physically shifted out and
 	// output on the bus
-	while (!I2C_CheckEvent(I2Cx, I2C_EVENT_MASTER_BYTE_TRANSMITTED));
+	restart_systick_count();
+	while (!systick_get_countflag() &&
+		!I2C_CheckEvent(I2Cx, I2C_EVENT_MASTER_BYTE_TRANSMITTED));
 }
 
 void i2c_write(uint32_t I2Cx, uint8_t address, uint8_t *data, uint8_t num_char) {

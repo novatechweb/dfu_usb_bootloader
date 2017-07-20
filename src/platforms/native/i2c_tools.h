@@ -122,6 +122,8 @@ typedef enum {RESET = 0, SET = !RESET} FlagStatus;
 typedef enum {DISABLE = 0, ENABLE = !DISABLE} FunctionState;
 typedef enum {ERROR = 0, SUCCESS = !ERROR} ErrorStatus;
 
+void stop_systick(void);
+void init_systick(void);
 void i2c_timeout(void);
 void i2c_write(uint32_t I2Cx, uint8_t address, uint8_t *data, uint8_t num_char);
 void init_i2c_ports(void);

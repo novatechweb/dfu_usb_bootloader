@@ -175,11 +175,11 @@ void init_i2c_devices(void) {
 			(board_serial_no[2] == i2c_board_serial_numbers[serial_num][2]))
 		{
 			char init_data[] = {0xFF, 0xFF};
+			init_systick();
 			init_i2c_ports();
 			i2c_write(I2C2, PCA8575_LED_ADDRESS, init_data, sizeof(init_data));
-			I2C_SR1(I2C2);
-			I2C_SR2(I2C2);
 			i2c_peripheral_disable(I2C2);
+			stop_systick();
 			break;
 		}
 	}
