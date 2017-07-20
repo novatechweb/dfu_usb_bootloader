@@ -25,6 +25,7 @@
 #include <libopencm3/stm32/usart.h>
 
 #include "usbdfu.h"
+#include "i2c_tools.h"
 
 const volatile char __attribute__((__section__(".serialno"))) board_serial_no[16] = "SERIAL NUM HERE";
 uint32_t app_address = 0x08002000;
@@ -34,6 +35,12 @@ const char serial_board_serial_numbers[][SERIAL_NUM_NUM_CHARS] = {
 	"124",
 	"129",
 	"134",
+};
+const char i2c_board_serial_numbers[][SERIAL_NUM_NUM_CHARS] = {
+	"817",	// 16 Channel Digital Input
+	"818",	// 16 Channel Digital Output
+	"839",	// 8 Channel Digital Input, 8 Channel Digital Output
+	"830",	// 16 Channel Analogue Input
 };
 
 struct platform_output_pins_t {
@@ -106,8 +113,6 @@ const struct platform_uart_t uarts[] = {{
 }};
 
 void init_ports(void) {
-	uint8_t i, j;
-
 	// Enable clocks for (GPIOA, GPIOB, GPIOC, GPIOD)
 	rcc_peripheral_enable_clock(&RCC_APB2ENR,
 	    RCC_APB2ENR_IOPAEN | RCC_APB2ENR_IOPBEN |
@@ -136,25 +141,49 @@ void init_ports(void) {
 	// ● JTCK/SWCLK: Input pull-down
 	gpio_set_mode(GPIO_BANK_JTCK_SWCLK, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, GPIO_JTCK_SWCLK);
 	gpio_clear(GPIO_BANK_JTCK_SWCLK, GPIO_JTCK_SWCLK);
+};
+
+void init_serial_ports(void) {
+	uint8_t serial_num;
+	uint8_t uart_num;
 
 	// *** Special pin setup for UARTS and UART LEDs ***
-	for(j=0; j<sizeof(serial_board_serial_numbers)/(SERIAL_NUM_NUM_CHARS*sizeof(char)); j++) {
-		if ((board_serial_no[0] == serial_board_serial_numbers[j][0]) &&
-			(board_serial_no[1] == serial_board_serial_numbers[j][1]) &&
-			(board_serial_no[2] == serial_board_serial_numbers[j][2]))
+	for(serial_num=0; serial_num<sizeof(serial_board_serial_numbers)/(SERIAL_NUM_NUM_CHARS*sizeof(char)); serial_num++) {
+		if ((board_serial_no[0] == serial_board_serial_numbers[serial_num][0]) &&
+			(board_serial_no[1] == serial_board_serial_numbers[serial_num][1]) &&
+			(board_serial_no[2] == serial_board_serial_numbers[serial_num][2]))
 		{
-			for(i=0; i<4; i++) {
-				gpio_set_mode(uarts[i].tx.port, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, uarts[i].tx.pin);
-				gpio_set_mode(uarts[i].rts.port, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, uarts[i].rts.pin);
-				gpio_set_mode(uarts[i].dtr.port, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, uarts[i].dtr.pin);
-				gpio_set(uarts[i].tx.port, uarts[i].tx.pin);
-				gpio_set(uarts[i].rts.port, uarts[i].rts.pin);
-				gpio_set(uarts[i].dtr.port, uarts[i].dtr.pin);
+			for(uart_num=0; uart_num<4; uart_num++) {
+				gpio_set_mode(uarts[uart_num].tx.port, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, uarts[uart_num].tx.pin);
+				gpio_set_mode(uarts[uart_num].rts.port, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, uarts[uart_num].rts.pin);
+				gpio_set_mode(uarts[uart_num].dtr.port, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, uarts[uart_num].dtr.pin);
+				gpio_set(uarts[uart_num].tx.port, uarts[uart_num].tx.pin);
+				gpio_set(uarts[uart_num].rts.port, uarts[uart_num].rts.pin);
+				gpio_set(uarts[uart_num].dtr.port, uarts[uart_num].dtr.pin);
 			}
 			break;
 		}
 	}
-};
+}
+
+void init_i2c_devices(void) {
+	uint8_t serial_num;
+	// *** Special pin setup for I2C ***
+	for(serial_num=0; serial_num<sizeof(i2c_board_serial_numbers)/(SERIAL_NUM_NUM_CHARS*sizeof(char)); serial_num++) {
+		if ((board_serial_no[0] == i2c_board_serial_numbers[serial_num][0]) &&
+			(board_serial_no[1] == i2c_board_serial_numbers[serial_num][1]) &&
+			(board_serial_no[2] == i2c_board_serial_numbers[serial_num][2]))
+		{
+			char init_data[] = {0xFF, 0xFF};
+			init_i2c_ports();
+			i2c_write(I2C2, PCA8575_LED_ADDRESS, init_data, sizeof(init_data));
+			I2C_SR1(I2C2);
+			I2C_SR2(I2C2);
+			i2c_peripheral_disable(I2C2);
+			break;
+		}
+	}
+}
 
 void dfu_detach(void)
 {
@@ -172,6 +201,12 @@ int main(void)
 
 	// set initial state of port pins
 	init_ports();
+
+	// set initial state of serial port pins
+	init_serial_ports();
+
+	// setup initial state of I2C devices
+	init_i2c_devices();
 
 	// setup systic
 	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
