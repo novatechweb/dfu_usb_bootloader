@@ -3,7 +3,7 @@ PLATFORM_DIR = platforms/$(PROBE_HOST)
 VPATH += $(PLATFORM_DIR)
 
 VERSION_MAJOR := 0x01
-VERSION_MINOR := 0x03
+VERSION_MINOR := 0x04
 
 CFLAGS += -Wall -Wextra -Wno-pointer-sign -Wno-char-subscripts\
 	-Wno-sign-compare \
