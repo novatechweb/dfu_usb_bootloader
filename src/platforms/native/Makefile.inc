@@ -15,7 +15,7 @@ VPATH += platforms/stm32
 
 all:	stm32f1_dfu.bin stm32f1_dfu.hex
 
-stm32f1_dfu: usbdfu.o dfucore.o dfu_f1.o
+stm32f1_dfu: i2c_tools.o usbdfu.o dfucore.o dfu_f1.o
 	$(CC) $^ -o $@ $(LDFLAGS_BOOT)
 
 stm32f1_dfu.bin:	stm32f1_dfu
