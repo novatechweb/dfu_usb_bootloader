@@ -161,6 +161,21 @@ void init_i2c_devices(void) {
 	stop_systick();
 }
 
+void init_876(void) {
+	// Active Config
+	gpio_set_mode(GPIOC, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, GPIO4);
+	gpio_set(GPIOC, GPIO4);
+	// Time Quality
+	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, GPIO14);
+	gpio_set(GPIOB, GPIO14);
+	// Alarm
+	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, GPIO15);
+	gpio_clear(GPIOB, GPIO15);
+	// IRIG Activity
+	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, GPIO1);
+	gpio_set(GPIOB, GPIO1);
+}
+
 const struct init_call_mapping mapping[] = {
     /* OrionLXm Copper Comm Board */
     {"124", init_serial_ports},
@@ -192,6 +207,8 @@ const struct init_call_mapping mapping[] = {
     {"178", init_serial_ports},
     /* OrionMX Combo Card (8 Input, 4 Output) */
     {"872", NULL},
+    /* OrionSX nt876 */
+    {"876", init_876},
 };
 
 static void init_board(void)
