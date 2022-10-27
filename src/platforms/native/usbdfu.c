@@ -168,14 +168,30 @@ const struct init_call_mapping mapping[] = {
     {"129", init_serial_ports},
     /* OrionLXm Bit Comm Board */
     {"134", init_serial_ports},
+    /* OrionLXm IO Board */
+    {"133", NULL},
     /* OrionIO 16 Channel Digital Input */
     {"817", init_i2c_devices},
     /* OrionIO 16 Channel Digital Output */
     {"818", init_i2c_devices},
     /* OrionIO Combo Card (8 Input, 8 Output) */
-    {"839", init_i2c_devices},
+    {"839", NULL},
     /* OrionIO 8 Channel Analog Input */
     {"830", init_i2c_devices},
+    /* OrionIO 8 Channel Flexible Analog Input */
+    {"159", NULL},
+    /* OrionIO 16 Channel Wetted Digital Input */
+    {"833", init_i2c_devices},
+    /* OrionIO 16 Channel Digital High Output */
+    {"836", init_i2c_devices},
+    /* OrionMX Power Supply with IO */
+    {"157", NULL},
+    /* OrionMX Four Port Serial Card */
+    {"158", init_serial_ports},
+    /* OrionMX Four Port Fiber Serial Card */
+    {"178", init_serial_ports},
+    /* OrionMX Combo Card (8 Input, 4 Output) */
+    {"872", NULL},
 };
 
 static void init_board(void)
