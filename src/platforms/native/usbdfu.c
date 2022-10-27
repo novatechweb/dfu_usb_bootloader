@@ -27,20 +27,14 @@
 #include "usbdfu.h"
 #include "i2c_tools.h"
 
-const volatile char __attribute__((__section__(".serialno"))) board_serial_no[16] = "SERIAL NUM HERE";
+const char __attribute__((__section__(".serialno"))) board_serial_no[16] = "SERIAL NUM HERE";
 uint32_t app_address = 0x08002000;
 
-#define SERIAL_NUM_NUM_CHARS 3
-const char serial_board_serial_numbers[][SERIAL_NUM_NUM_CHARS] = {
-	"124",
-	"129",
-	"134",
-};
-const char i2c_board_serial_numbers[][SERIAL_NUM_NUM_CHARS] = {
-	"817",	// 16 Channel Digital Input
-	"818",	// 16 Channel Digital Output
-	"839",	// 8 Channel Digital Input, 8 Channel Digital Output
-	"830",	// 16 Channel Analogue Input
+#define SERIAL_NUM_NUM_CHARS 4
+
+struct init_call_mapping {
+	const char bordID[SERIAL_NUM_NUM_CHARS];
+	void (*init_call)(void);
 };
 
 struct platform_output_pins_t {
@@ -144,44 +138,62 @@ void init_ports(void) {
 };
 
 void init_serial_ports(void) {
-	uint8_t serial_num;
 	uint8_t uart_num;
 
 	// *** Special pin setup for UARTS and UART LEDs ***
-	for(serial_num=0; serial_num<sizeof(serial_board_serial_numbers)/(SERIAL_NUM_NUM_CHARS*sizeof(char)); serial_num++) {
-		if ((board_serial_no[0] == serial_board_serial_numbers[serial_num][0]) &&
-			(board_serial_no[1] == serial_board_serial_numbers[serial_num][1]) &&
-			(board_serial_no[2] == serial_board_serial_numbers[serial_num][2]))
-		{
-			for(uart_num=0; uart_num<4; uart_num++) {
-				gpio_set_mode(uarts[uart_num].tx.port, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, uarts[uart_num].tx.pin);
-				gpio_set_mode(uarts[uart_num].rts.port, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, uarts[uart_num].rts.pin);
-				gpio_set_mode(uarts[uart_num].dtr.port, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, uarts[uart_num].dtr.pin);
-				gpio_set(uarts[uart_num].tx.port, uarts[uart_num].tx.pin);
-				gpio_set(uarts[uart_num].rts.port, uarts[uart_num].rts.pin);
-				gpio_set(uarts[uart_num].dtr.port, uarts[uart_num].dtr.pin);
-			}
-			break;
-		}
+	for(uart_num=0; uart_num<4; uart_num++) {
+		gpio_set_mode(uarts[uart_num].tx.port, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, uarts[uart_num].tx.pin);
+		gpio_set_mode(uarts[uart_num].rts.port, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, uarts[uart_num].rts.pin);
+		gpio_set_mode(uarts[uart_num].dtr.port, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, uarts[uart_num].dtr.pin);
+		gpio_set(uarts[uart_num].tx.port, uarts[uart_num].tx.pin);
+		gpio_set(uarts[uart_num].rts.port, uarts[uart_num].rts.pin);
+		gpio_set(uarts[uart_num].dtr.port, uarts[uart_num].dtr.pin);
 	}
 }
 
 void init_i2c_devices(void) {
-	uint8_t serial_num;
-	// *** Special pin setup for I2C ***
-	for(serial_num=0; serial_num<sizeof(i2c_board_serial_numbers)/(SERIAL_NUM_NUM_CHARS*sizeof(char)); serial_num++) {
-		if ((board_serial_no[0] == i2c_board_serial_numbers[serial_num][0]) &&
-			(board_serial_no[1] == i2c_board_serial_numbers[serial_num][1]) &&
-			(board_serial_no[2] == i2c_board_serial_numbers[serial_num][2]))
-		{
-			char init_data[] = {0xFF, 0xFF};
-			init_systick();
-			init_i2c_ports();
-			i2c_write(I2C2, PCA8575_LED_ADDRESS, init_data, sizeof(init_data));
-			i2c_peripheral_disable(I2C2);
-			stop_systick();
-			break;
+	char init_data[] = {0xFF, 0xFF};
+
+	init_systick();
+	init_i2c_ports();
+	i2c_write(I2C2, PCA8575_LED_ADDRESS, init_data, sizeof(init_data));
+	i2c_peripheral_disable(I2C2);
+	stop_systick();
+}
+
+const struct init_call_mapping mapping[] = {
+    /* OrionLXm Copper Comm Board */
+    {"124", init_serial_ports},
+    /* OrionLXm Fiber Comm Board */
+    {"129", init_serial_ports},
+    /* OrionLXm Bit Comm Board */
+    {"134", init_serial_ports},
+    /* OrionIO 16 Channel Digital Input */
+    {"817", init_i2c_devices},
+    /* OrionIO 16 Channel Digital Output */
+    {"818", init_i2c_devices},
+    /* OrionIO Combo Card (8 Input, 8 Output) */
+    {"839", init_i2c_devices},
+    /* OrionIO 8 Channel Analog Input */
+    {"830", init_i2c_devices},
+};
+
+static void init_board(void)
+{
+	uint8_t indx;
+
+	// set initial state of port pins
+	init_ports();
+	for (indx=0; indx < sizeof(mapping)/sizeof(struct init_call_mapping); indx++) {
+		if (mapping[indx].init_call == NULL) {
+			continue;
 		}
+		if (memcmp(mapping[indx].bordID, board_serial_no, strlen(mapping[indx].bordID)) != 0) {
+			// bordID dose not match board_serial_no
+			continue;
+		}
+		// call the init
+		mapping[indx].init_call();
 	}
 }
 
@@ -200,18 +212,12 @@ int main(void)
 	rcc_clock_setup_in_hse_8mhz_out_72mhz();
 
 	// set initial state of port pins
-	init_ports();
-
-	// set initial state of serial port pins
-	init_serial_ports();
-
-	// setup initial state of I2C devices
-	init_i2c_devices();
+	init_board();
 
 	// setup systic
 	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
 	systick_set_reload(900000);
-	
+
 	// Setup USB hardware
 	rcc_periph_clock_enable(RCC_USB);
 	gpio_set_mode(GPIOA, GPIO_MODE_INPUT, 0, GPIO8);
